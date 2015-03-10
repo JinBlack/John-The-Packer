@@ -3,6 +3,7 @@
 
 #define USELESS 0xDEADB00B
 #define KEYNUMBER 2
+#define FAKESIZE 0xf00ffa00
 
 char *keys[KEYNUMBER] = {"\x01\x02\x03\x04", "\x10\x20\x30\x40"};
 
@@ -60,12 +61,12 @@ int ENC_sub(int caller, int ebp, int eip, int eips, int a, int b){
 
 
 int ENC_funtest(int caller, int ebp, int eip,int eips, int a, int b){
-    return a+(int)decrypt((void *)ENC_sub, 11, b, 1);
+    return a+(int)decrypt((void *)ENC_sub, FAKESIZE, b, 1);
 }
 
 
 
 int main(int argc, char const *argv[])
 {
-    printf("%d\n", decrypt((void *) ENC_funtest,35,2,3));
+    printf("%d\n", decrypt((void *) ENC_funtest, FAKESIZE,2,3));
 }

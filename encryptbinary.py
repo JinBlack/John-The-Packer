@@ -2,6 +2,49 @@
 import sys
 import capstone
 from elftools.elf.elffile import ELFFile
+import logging
+import struct
+import re
+
+txtblk = '\033[0;30m'  # Nero - Regular
+txtred = '\033[0;31m'  # Rosso
+txtgrn = '\033[0;32m'  # Verde
+txtylw = '\033[0;33m'  # Giallo
+txtblu = '\033[0;34m'  # Blu
+txtpur = '\033[0;35m'  # Viola
+txtcyn = '\033[0;36m'  # Ciano
+txtwht = '\033[0;37m'  # Bianco
+bldblk = '\033[1;30m'  # Nero - Bold
+bldred = '\033[1;31m'  # Rosso
+bldgrn = '\033[1;32m'  # Verde
+bldylw = '\033[1;33m'  # Giallo
+bldblu = '\033[1;34m'  # Blu
+bldpur = '\033[1;35m'  # Viola
+bldcyn = '\033[1;36m'  # Ciano
+bldwht = '\033[1;37m'  # Bianco
+unkblk = '\033[4;30m'  # Nero - Underline
+undred = '\033[4;31m'  # Rosso
+undgrn = '\033[4;32m'  # Verde
+undylw = '\033[4;33m'  # Giallo
+undblu = '\033[4;34m'  # Blu
+undpur = '\033[4;35m'  # Viola
+undcyn = '\033[4;36m'  # Ciano
+undwht = '\033[4;37m'  # Bianco
+bakblk = '\033[40m'   # Nero - Background
+bakred = '\033[41m'   # Rosso
+badgrn = '\033[42m'   # Verde
+bakylw = '\033[43m'   # Giallo
+bakblu = '\033[44m'   # Blu
+bakpur = '\033[45m'   # Viola
+bakcyn = '\033[46m'   # Ciano
+bakwht = '\033[47m'   # Bianco
+txtrst = '\033[0m'    # Text Reset
+
+
+logging.basicConfig(
+    format=txtylw + '%(asctime)s' + txtblu + ' %(message)s' + txtrst,
+    datefmt='%m/%d/%Y %I:%M:%S %p',
+    level=logging.DEBUG)
 
 
 KEYS = ["\x01\x02\x03\x04", "\x10\x20\x30\x40"]
@@ -19,24 +62,76 @@ f = open(sys.argv[1], "rb+")
 elf = ELFFile(f)
 disassembler = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_32)
 text = elf.get_section_by_name(".text")
-print text['sh_offset'], hex(text['sh_addr'])
+logging.debug("%d %s" % (text['sh_offset'], hex(text['sh_addr'])))
 
-symbolsENC = []
+symbolsENC = dict()
 
 symtab = elf.get_section_by_name(".symtab")
 if not symtab.is_null():
     for y in symtab.iter_symbols():
         if "ENC_" in y.name:
-            symbolsENC.append(y)
+            key = struct.pack("<I", y.entry['st_value'])
+            logging.debug("%s key is %s" % (y.name, key.encode("hex")))
+            symbolsENC[key] = {"name": y.name,
+                               "st_value": y.entry['st_value'], "st_size": y.entry["st_size"]}
 
-for y in symbolsENC:
-    print(y.name, y.entry, hex(y.entry['st_value']))
-    delta = y.entry['st_value'] - text['sh_addr']
+
+TOPATCH = "\x68\x00\xFA\x0F\xF0\x68"
+text.stream.seek(0)
+binary = text.stream.read()
+for k in symbolsENC:
+    y = symbolsENC[k]
+    pos = binary.find(TOPATCH + k)
+    text.stream.seek(pos)
+    print y['st_size']
+    newpush = "\x68" + struct.pack("<I", y['st_size'])
+    text.stream.write(newpush)
+    logging.debug("Patched %d with %s" % (pos, newpush.encode("hex")))
+# counter = {}
+# for k in symbolsENC:
+#     counter[k] = {"count": 0, "updated": False}
+
+# text.stream.seek(0)
+# textpos = 0
+# for b in text.stream.next():
+#     for k in symbolsENC:
+# if counter[k]['count'] > 0:
+# print k.encode("hex"), counter[k]
+#         print b.encode("hex"), TOPATCH[counter[k]['count']].encode("hex")
+#         if (counter[k]['count'] < len(TOPATCH) and
+#                 b == TOPATCH[counter[k]['count']]):
+#             counter[k]['count'] += 1
+#             counter[k]['updated'] = True
+#             print b.encode("hex"),
+#         if (counter[k]['count'] > len(TOPATCH) and
+#                 b == k[counter[k]['count'] - len(TOPATCH)]):
+#             print b.encode("hex"),
+#             counter[k]['count'] += 1
+#             counter[k]['updated'] = True
+#             if counter[k]['count'] >= len(TOPATCH) + 4:
+#                 logging.debug(
+#                     ("Found " + bldcyn + "%s" + txtrst + " at %d") % (k.encode("hex"),
+#                                                                       textpos))
+#                 counter[k]['count'] = 0
+#                 print "---", counter
+#     for k in counter:
+#         if not counter[k]['updated']:
+#             counter[k]['count'] = 0
+#         else:
+#             counter[k]['updated'] = False
+#     textpos += 1
+
+for k in symbolsENC:
+    y = symbolsENC[k]
+    print y
+    logging.debug("%s %s" % (y["name"], hex(y['st_value'])))
+    delta = y['st_value'] - text['sh_addr']
     text.stream.seek(text['sh_offset'] + delta)
-    fun = text.stream.read(y.entry['st_size'])
-    print "Encrypting %s..." % y.name
-    for i in disassembler.disasm(fun, y.entry['st_value']):
-        print hex(i.address), i.mnemonic, i.op_str
-    newfun = xoring(fun, KEYS[y.entry['st_value'] % len(KEYS)])
+    fun = text.stream.read(y['st_size'])
+    logging.info(("Encrypting " + bldred + "%s..." + txtrst) % y["name"])
+    for i in disassembler.disasm(fun, y['st_value']):
+        logging.debug(("%s " + bldgrn + "%s %s" + txtrst) %
+                      (hex(i.address), i.mnemonic, i.op_str))
+    newfun = xoring(fun, KEYS[y['st_value'] % len(KEYS)])
     text.stream.seek(text['sh_offset'] + delta)
     text.stream.write(newfun)
