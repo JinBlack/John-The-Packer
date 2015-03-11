@@ -4,7 +4,6 @@ import capstone
 from elftools.elf.elffile import ELFFile
 import logging
 import struct
-import re
 
 txtblk = '\033[0;30m'  # Nero - Regular
 txtred = '\033[0;31m'  # Rosso
@@ -47,12 +46,15 @@ logging.basicConfig(
     level=logging.DEBUG)
 
 
-KEYS = ["\x01\x02\x03\x04", "\x10\x20\x30\x40"]
+KEYS = ["\x01\x02\x03\x04", "\x10\x20\x30\x40",
+        "B00B", "DEAD", "\xff\xff\xff\xff"]
 
 
 def xoring(data, key, limit=None):
     ret = ""
-    for i in xrange(0, len(data)):
+    if limit is None:
+        limit = len(data)
+    for i in xrange(0, limit):
         x = data[i]
         k = key[i % len(key)]
         ret += chr(ord(x) ^ ord(k))
@@ -82,24 +84,27 @@ binary = text.stream.read()
 for k in symbolsENC:
     y = symbolsENC[k]
     pos = binary.find(TOPATCH + k)
-    text.stream.seek(pos)
-    print y['st_size']
-    newpush = "\x68" + struct.pack("<I", y['st_size'])
-    text.stream.write(newpush)
-    logging.debug("Patched %d with %s" % (pos, newpush.encode("hex")))
-
+    if pos > 0:
+        print pos, y['st_size'] // 4
+        text.stream.seek(pos)
+        newpush = "\x68" + struct.pack("<I", y['st_size'] // 4)
+        text.stream.write(newpush)
+        logging.debug(("Patched " + bldgrn + "%s" + txtblu +
+                       " in pos %d with %s") % (y['name'], pos, newpush.encode("hex")))
+    else:
+        logging.debug(
+            ("Function not found " + bldred + "%s" + txtblu) % y['name'])
 
 for k in symbolsENC:
     y = symbolsENC[k]
-    print y
     logging.debug("%s %s" % (y["name"], hex(y['st_value'])))
     delta = y['st_value'] - text['sh_addr']
     text.stream.seek(text['sh_offset'] + delta)
     fun = text.stream.read(y['st_size'])
-    logging.info(("Encrypting " + bldred + "%s..." + txtrst) % y["name"])
-    for i in disassembler.disasm(fun, y['st_value']):
-        logging.debug(("%s " + bldgrn + "%s %s" + txtrst) %
-                      (hex(i.address), i.mnemonic, i.op_str))
-    newfun = xoring(fun, KEYS[y['st_value'] % len(KEYS)])
+    logging.info(("Encrypting " + bldylw + "%s..." + txtrst) % y["name"])
+    # for i in disassembler.disasm(fun, y['st_value']):
+    #     logging.debug(("%s " + bldgrn + "%s %s" + txtrst) %
+    #                   (hex(i.address), i.mnemonic, i.op_str))
+    newfun = xoring(fun, KEYS[y['st_value'] % len(KEYS)], limit=(y['st_size'] // 4) * 4)
     text.stream.seek(text['sh_offset'] + delta)
     text.stream.write(newfun)
