@@ -87,39 +87,7 @@ for k in symbolsENC:
     newpush = "\x68" + struct.pack("<I", y['st_size'])
     text.stream.write(newpush)
     logging.debug("Patched %d with %s" % (pos, newpush.encode("hex")))
-# counter = {}
-# for k in symbolsENC:
-#     counter[k] = {"count": 0, "updated": False}
 
-# text.stream.seek(0)
-# textpos = 0
-# for b in text.stream.next():
-#     for k in symbolsENC:
-# if counter[k]['count'] > 0:
-# print k.encode("hex"), counter[k]
-#         print b.encode("hex"), TOPATCH[counter[k]['count']].encode("hex")
-#         if (counter[k]['count'] < len(TOPATCH) and
-#                 b == TOPATCH[counter[k]['count']]):
-#             counter[k]['count'] += 1
-#             counter[k]['updated'] = True
-#             print b.encode("hex"),
-#         if (counter[k]['count'] > len(TOPATCH) and
-#                 b == k[counter[k]['count'] - len(TOPATCH)]):
-#             print b.encode("hex"),
-#             counter[k]['count'] += 1
-#             counter[k]['updated'] = True
-#             if counter[k]['count'] >= len(TOPATCH) + 4:
-#                 logging.debug(
-#                     ("Found " + bldcyn + "%s" + txtrst + " at %d") % (k.encode("hex"),
-#                                                                       textpos))
-#                 counter[k]['count'] = 0
-#                 print "---", counter
-#     for k in counter:
-#         if not counter[k]['updated']:
-#             counter[k]['count'] = 0
-#         else:
-#             counter[k]['updated'] = False
-#     textpos += 1
 
 for k in symbolsENC:
     y = symbolsENC[k]
