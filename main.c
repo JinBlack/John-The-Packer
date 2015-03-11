@@ -2,12 +2,15 @@
 #include <sys/mman.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
+#include <math.h>
 
 #define USELESS 0xDEADB00B
 #define KEYNUMBER 5
 #define FAKESIZE 0xf00ffa00
-#define NUMCHECKS 1
-//"flag{pack3r_is_4_p4in_in_th3_4ss}"
+#define NUMCHECKS 5
+#define CHECK2SIZE 11
+//"flag{packer-15-4-?41=-in-th3-4ss}"
 
 char *keys[KEYNUMBER] = {"\x01\x02\x03\x04", "\x10\x20\x30\x40", "B00B", "DEAD", "\xff\xff\xff\xff"};
 
@@ -59,15 +62,6 @@ void *decrypt(void *called, int length, ...){
 
 
 
-int ENC_sub(int caller, int ebp, int eip, int eips, int a, int b){
-    return a-b;
-}
-
-
-int ENC_funtest(int caller, int ebp, int eip, int eips, int a, int b){
-    return a+(int)decrypt((void *)ENC_sub, FAKESIZE, b, 1);
-}
-
 int ENC_check_header(int caller, int ebp, int eip, int eips, char *key){
     char *header = strstr(key,"flag{");
     if (header == key){
@@ -77,6 +71,79 @@ int ENC_check_header(int caller, int ebp, int eip, int eips, char *key){
     return 0;
 }
 
+
+int ENC_check_footer(int caller, int ebp, int eip, int eips, char *key){
+    if ('}' == *(key+strlen(key)-1)){
+        return 1;
+    }
+    printf("wrong End for %s\n", key);
+    return 0;
+}
+
+
+int ENC_check_ascii(int caller, int ebp, int eip, int eips, char *key){
+    int l = strlen(key);
+    int i;
+    for (i=0; i < l; i++){
+        if (!isascii(key[i])){
+            printf("Not ascii character in %s\n", key);
+            return 0;            
+        }
+    }
+    return 1;
+}
+
+int ENC_eq(int caller, int ebp, int eip, int eips, int x){
+    float a = pow(x, 5) * 0.5166666688 - pow(x, 4) *8.125000037 + pow(x, 3)*45.83333358 - pow(x, 2) * 109.8750007 + x * 99.65000093 + 83.99999968;
+    return (int) a;
+}
+
+int ENC_func(int caller, int ebp, int eip, int eips, int x,unsigned long long y){
+    unsigned long long a = 4* (unsigned long long)pow(2,x) + 21;
+    // printf("%c %llu %llu\n",x, a, y);
+    return a==y;
+}
+
+
+int ENC_check2(int caller, int ebp, int eip, int eips, char *key){
+    unsigned long long value[CHECK2SIZE] = {140737488355349,
+                                            2251799813685269,
+                                            36028797018963989,
+                                            140737488355349,
+                                            18014398509482005,
+                                            140737488355349,
+                                            36893488147419103253,
+                                            18014398509482005,
+                                            2251799813685269,
+                                            9223372036854775829,
+                                            140737488355349};
+    int i;
+
+    for (i=0; i < CHECK2SIZE; i++){
+        // printf("value %d: %llu\n",i, value[i]);
+       if (!decrypt((void *) ENC_func, FAKESIZE, (int)key[11+i], value[i])){
+            return 0;
+       }
+    }
+    return 1;
+}
+
+
+
+int ENC_check1(int caller, int ebp, int eip, int eips, char *key){
+    int l = 6;
+    int i;
+
+    for (i=1; i <= l; i++){
+       if ((int)key[4+i] != decrypt((void *) ENC_eq, FAKESIZE, i)){
+        return 0;
+       }
+    }
+    return 1;
+}
+
+
+
 int ENC_check(int caller, int ebp, int eip, int eips, int argc, char const *argv[]){
     if (argc <= 1){
         printf("Usage:\n %s flag{<key>}\n", argv[0]);
@@ -84,6 +151,11 @@ int ENC_check(int caller, int ebp, int eip, int eips, int argc, char const *argv
     }
     int checks = 0;
     checks +=(int) decrypt((void *) ENC_check_header, FAKESIZE, argv[1]);
+    checks +=(int) decrypt((void *) ENC_check_footer, FAKESIZE, argv[1]);
+    checks +=(int) decrypt((void *) ENC_check_ascii, FAKESIZE, argv[1]);
+    checks +=(int) decrypt((void *) ENC_check1, FAKESIZE, argv[1]);
+    checks +=(int) decrypt((void *) ENC_check2, FAKESIZE, argv[1]);
+
     if (checks == NUMCHECKS){
         printf("\033[1;37mYou go the flag: \033[1;32m%s\033[0m\n", argv[1]);
     }
