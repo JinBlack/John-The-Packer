@@ -8,8 +8,11 @@
 #define USELESS 0xDEADB00B
 #define KEYNUMBER 5
 #define FAKESIZE 0xf00ffa00
-#define NUMCHECKS 5
+#define NUMCHECKS 6
 #define CHECK2SIZE 11
+
+// #define DEBUG
+
 //"flag{packer-15-4-?41=-in-th3-4ss}"
 
 char *keys[KEYNUMBER] = {"\x01\x02\x03\x04", "\x10\x20\x30\x40", "B00B", "DEAD", "\xff\xff\xff\xff"};
@@ -105,6 +108,36 @@ int ENC_func(int caller, int ebp, int eip, int eips, int x,unsigned long long y)
 }
 
 
+int ENC_check3(int caller, int ebp, int eip, int eips, char *key, int i){
+    const char *test = "\x10\x44\x07\x43\x59\x1c\x5b\x1e\x19\x47\x00";
+    char a,b;
+    #ifdef DEBUG
+        printf("iter: %d len: %d\n",i, strlen(key) );
+    #endif
+
+    if (i+CHECK2SIZE+11 >= strlen(key)){
+        return 1;
+    }
+    a = test[i] ^ key[10+CHECK2SIZE+i-1];
+    b = key[10+CHECK2SIZE+i];
+    #ifdef DEBUG
+        printf("t:%x k-1:%c t^k-1:%x != k:%x\n",test[i], key[10+CHECK2SIZE+i-1] ,a, b);
+    #endif
+
+    if (a != b){
+        #ifdef DEBUG
+            printf("Fail\n");
+        #endif
+        return 0;
+    }
+    #ifdef DEBUG
+        printf("Next Step\n");
+    #endif
+
+    return ENC_check3(USELESS, USELESS, USELESS, USELESS, key, i+1);
+}
+
+
 int ENC_check2(int caller, int ebp, int eip, int eips, char *key){
     unsigned long long value[CHECK2SIZE] = {140737488355349,
                                             2251799813685269,
@@ -135,7 +168,7 @@ int ENC_check1(int caller, int ebp, int eip, int eips, char *key){
     int i;
 
     for (i=1; i <= l; i++){
-       if ((int)key[4+i] != decrypt((void *) ENC_eq, FAKESIZE, i)){
+       if ((int)key[4+i] != (int)decrypt((void *) ENC_eq, FAKESIZE, i)){
         return 0;
        }
     }
@@ -155,6 +188,7 @@ int ENC_check(int caller, int ebp, int eip, int eips, int argc, char const *argv
     checks +=(int) decrypt((void *) ENC_check_ascii, FAKESIZE, argv[1]);
     checks +=(int) decrypt((void *) ENC_check1, FAKESIZE, argv[1]);
     checks +=(int) decrypt((void *) ENC_check2, FAKESIZE, argv[1]);
+    checks +=(int) decrypt((void *) ENC_check3, FAKESIZE, argv[1], 0);
 
     if (checks == NUMCHECKS){
         printf("\033[1;37mYou go the flag: \033[1;32m%s\033[0m\n", argv[1]);
