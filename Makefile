@@ -6,7 +6,7 @@ OBJECTS=$(SOURCES:.c=.o)
 EXECUTABLE=topack
 PACKER=encryptbinary.py
 
-all: $(SOURCES) $(EXECUTABLE) pack
+all: $(SOURCES) $(EXECUTABLE) pack strip
 	
 $(EXECUTABLE): $(OBJECTS)
 	$(CC) $(CFLAGS) $(LDFLAGS) $(OBJECTS) main.c -o $@
@@ -16,6 +16,9 @@ $(EXECUTABLE): $(OBJECTS)
 
 pack:
 	./$(PACKER) $(EXECUTABLE)
+
+strip:
+	strip $(EXECUTABLE)
 
 clean:
 	rm $(EXECUTABLE) $(OBJECTS)
