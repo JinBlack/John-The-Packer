@@ -194,7 +194,7 @@ int ENC_check(int caller, int ebp, int eip, int eips, int argc, char const *argv
         printf("\033[1;37mYou got the flag: \033[1;32m%s\033[0m\n", argv[1]);
     }
     else{
-        printf("\033[1;31mLooser\n\033[0m");
+        printf("\033[1;31mLoser\n\033[0m");
     }
 }
 
