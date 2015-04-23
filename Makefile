@@ -9,7 +9,7 @@ PACKER=encryptbinary.py
 all: $(SOURCES) $(EXECUTABLE) pack strip
 	
 $(EXECUTABLE): $(OBJECTS)
-	$(CC) $(CFLAGS) $(LDFLAGS) $(OBJECTS) main.c -o $@
+	$(CC) $(CFLAGS) $(OBJECTS) main.c -o $@ $(LDFLAGS)
 
 .c.o:
 	$(CC) $(CFLAGS) $< -o $@
