@@ -8,7 +8,7 @@
 #define USELESS 0xDEADB00B
 #define KEYNUMBER 5
 #define FAKESIZE 0xf00ffa00
-#define NUMCHECKS 6
+#define NUMCHECKS 7
 #define CHECK2SIZE 11
 
 // #define DEBUG
@@ -108,6 +108,13 @@ int ENC_func(int caller, int ebp, int eip, int eips, int x,unsigned long long y)
 }
 
 
+int ENC_len(int caller, int ebp, int eip, int eips, char *key){
+	if (strlen(key) == 33)
+		return 1;
+	return 0;
+}
+
+
 int ENC_check3(int caller, int ebp, int eip, int eips, char *key, int i){
     const char *test = "\x10\x44\x07\x43\x59\x1c\x5b\x1e\x19\x47\x00";
     char a,b;
@@ -189,6 +196,7 @@ int ENC_check(int caller, int ebp, int eip, int eips, int argc, char const *argv
     checks +=(int) decrypt((void *) ENC_check1, FAKESIZE, argv[1]);
     checks +=(int) decrypt((void *) ENC_check2, FAKESIZE, argv[1]);
     checks +=(int) decrypt((void *) ENC_check3, FAKESIZE, argv[1], 0);
+    checks +=(int) decrypt((void *) ENC_len, FAKESIZE, argv[1]);
 
     if (checks == NUMCHECKS){
         printf("\033[1;37mYou got the flag: \033[1;32m%s\033[0m\n", argv[1]);
