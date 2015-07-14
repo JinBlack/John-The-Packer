@@ -164,6 +164,9 @@ int ENC_check2(int caller, int ebp, int eip, int eips, char *key){
        if (!decrypt((void *) ENC_func, FAKESIZE, (int)key[11+i], value[i])){
             return 0;
        }
+       if (((int)key[17] & 0x1) == 0){
+            return 0;
+       }
     }
     return 1;
 }
